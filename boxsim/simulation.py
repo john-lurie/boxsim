@@ -1,4 +1,5 @@
 """Simulator and supporting functions"""
+import matplotlib.pyplot as plt
 import numpy as np
 
 def outer_subtract_self(array):
@@ -11,49 +12,56 @@ def outer_subtract_self(array):
         raise ValueError(f"Expected array of dimension 1, got: {rank}")
 
 
-def stack_pos_vel(positions_x, positions_y, velocities_x, velocities_y):
-    """Stack position and velocity arrays."""
-    return np.vstack((positions_x, positions_y, velocities_x, velocities_y))
-
-
 class Simulator:
     """Two-dimensional gas particle simulator."""
-    def __init__(self, side_length=10.0, relative_radius=0.01, n_particles=50,
-                 seed=999):
-        
-        self.side_length = side_length
-        self.particle_radius = side_length * relative_radius
-        self.n_particles = n_particles
-        # Random number generator
-        self.rng = np.random.default_rng(seed)
-        # Edges of the box including particle_radius
-        # Box is a square, so inner and outer same for x and y.
-        self.inner_edge = 0.0 + self.particle_radius
-        self.outer_edge = side_length - self.particle_radius
-        
-        self.positions_x = None
-        self.positions_y = None
+    def __init__(self, width=100.0, radius=1.0):
 
-    def make_particles(self, positions_velocities=None):
+        self.width = width
+        self.radius = radius
+
+        self.pos_x = None
+        self.pos_y = None
+        self.vel_x = None
+        self.vel_y = None
+        
+        self.fig = None
+        self.ax = None
+        self.plotter = None
+
+    def make_particles(self, pos_vel=None):
         """
         Initialize the particles.
         
-        If positions and velocities are not specified, they will be
-        chosen from a random uniform distribution.
+        If positions and velocities are not specified, they will be chosen
+        from a random uniform distribution.
         """
-        if positions_velocities is not None:
-            if positions_velocities.ndim == 2 and positions_velocities.shape[0] == 4:
-                self.positions_x = positions_velocities[0]
-                self.positions_y = positions_velocities[1]
-                self.velocities_x = positions_velocities[2]
-                self.velocities_y = positions_velocities[3]
+        msg = f"Expected 'pos_vel' to have shape (4, N), got: {pos_vel.shape}"
+        
+        if pos_vel is not None:
+            if pos_vel.ndim == 2 and pos_vel.shape[0] == 4:
+                self.pos_x = pos_vel[0]
+                self.pos_y = pos_vel[1]
+                self.vel_x = pos_vel[2]
+                self.vel_y = pos_vel[3]
             else:
-                raise ValueError(f"Expected 'positions' to have shape "
-                                 "(4, N), got: {positions.shape}")
+                raise ValueError(msg)
         else:
-            self.positions_x = self.rng.uniform(self.inner_edge, 
-                                                self.outer_edge,
-                                                self.n_particles)
-            self.positions_y = self.rng.uniform(self.inner_edge,
-                                                self.outer_edge, 
-                                                self.n_particles)
+            # FUTURE: Draw from random uniform distribution.
+            pass
+
+    def run(self):
+        """Run the simulation."""
+        self.fig, self.ax = plt.subplots(dpi=120)
+        self.ax.set_xlim(0.0, self.width)
+        self.ax.set_ylim(0.0, self.width)
+        self.ax.set_aspect(1)
+        self.fig.canvas.draw()
+        
+        window_ext = self.ax.get_window_extent().width
+        ms =  (self.radius / self.width) * window_ext * (72.0 / self.fig.dpi)
+        self.plotter, = self.ax.plot([], [], marker='o', ms=ms, mew=0,
+                                     color='k')
+        
+        self.plotter.set_data(self.pos_x, self.pos_y)
+        
+        plt.show()
